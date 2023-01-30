@@ -1,0 +1,70 @@
+plugins {
+    id 'org.springframework.boot' version '2.2.4.RELEASE'
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+
+    api project(':caas-core')
+
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'com.google.guava:guava'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4' // ConfigurationDeserializer depends on 2.13
+    implementation ('com.crypto.exchange:oms-common-aeron:' + project.omscommons_version) {
+        setChanging(true);
+    }
+    implementation 'org.agrona:agrona'
+    implementation ('com.crypto.exchange:commons-aeron:' + project.commons_version) {
+        setChanging(true);
+    }
+    implementation ('com.crypto.exchange:commons-enums') {
+        setChanging(true);
+        version {
+            strictly project.commons_version
+        }
+    }
+    implementation 'com.crypto.exchange:commons-datamodels:' + project.commons_version
+    implementation 'com.crypto.exchange:commons-exception:' + project.commons_version
+    implementation ('com.crypto.exchange:aeron-service-client:6.2.000300-BETA') {
+        exclude(group: "com.crypto.exchange", module: "commons-enums")
+    }
+
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    // junit 5
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+}
+
+test {
+    useJUnitPlatform()
+}
+
+compileJava.dependsOn(processResources)
+processResources {
+    filesMatching('**/*.yaml') {
+        expand project.properties
+    }
+}
+
+repositories {
+    mavenCentral()
+}

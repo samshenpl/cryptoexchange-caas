@@ -1,0 +1,176 @@
+instancetype: CAAS
+
+server:
+  port: 24880
+
+health:
+  config:
+    enabled: false
+
+management:
+  server:
+    port: 24870
+  endpoints:
+    enabled-by-default: true
+    web:
+      exposure:
+        include: "self,info,health,prometheus,loggers,threaddump,features,logging-service"
+        exclude: "env,beans,heapdump"
+      base-path: /monitor
+  endpoint:
+    beans:
+      enabled: false
+    conditions:
+      enabled: false
+    configprops:
+      enabled: false
+    health:
+      show-details: always
+  metrics:
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+            percentiles-histogram: true
+    export:
+      simple:
+        enabled: true
+    tags:
+      application: ${project.name}
+
+cryptoexchange:
+  aeronservice:
+    health-check-interval: 1000
+    monitor-thread-priority: 10
+  oms-common:
+    disable-recovery: false
+    aeron-texo-oms-health-checker:
+      health-check-interval: 1000
+      health-checkers:
+        - url: "http://ordermanagement-server-aeron:12870"
+          routing-id: 0
+      monitor-thread-priority: 10
+    aeron-texo-oms-client:
+      event-source-sequence-after-timestamp: 30
+      event-source-sequence-keep-before-timestamp: 60
+      sequence-update-interval: 5000
+      # Multi Client Configs
+      multi-client-configs:
+        0:
+          event-source: CAAS_OMS00
+          request-channel:
+            address: ordermanagement-server-aeron
+            port: 15400
+            subscriber-inbox-address: ordermanagement-server-aeron
+            stream-id: 1
+            dir: /dev/shm/caas/caas-event-channel
+            threadingMode: DEDICATED
+            launch-media-driver: true
+            dir-delete-on-start: false
+    aeron-texo-broker-client:
+      event-source-sequence-after-timestamp: 30
+      event-source-sequence-keep-before-timestamp: 60
+      sequence-update-interval: 5000
+      # Multi Client Configs
+      multi-client-configs:
+        0:
+          event-source: PTB_CAAS00
+          response-channel:
+            address: "__{hostname}"
+            port: 15350
+            publisher-inbox-address: pt-broker-app-acct00-service
+            publisher-inbox-port: 13301
+            stream-id: 1
+            replay-subscriber: true
+            dir: /dev/shm/caas/caas-event-channel
+            idle-strategy-config: sleepingmillis/1
+            enable-stat-check: true
+            stat-check-interval: 10000
+            replay-by-alt-sequence: true
+            add-publication-retry-failure-count: 1000
+            add-publication-retry-interval: 1000
+            launch-media-driver: false
+            dir-delete-on-start: false
+    channels:
+      parent-order-request-channel:
+        channel-type: PARENT_REQUEST_SUBSCRIBER
+        channel-id: 1
+        aeron-config:
+          address: "__{hostname}"
+          port: 24100
+          stream-id: 1
+          archive-enabled: true
+          dir: /dev/shm/caas/parent/parent-order-request-channel
+          archive-dir: /app/aeron/caas/parent/parent-order-request-channel-archive
+          segment-retained: 700
+          threadingMode: DEDICATED # It requires take care multi-threading scenario while changing the threadingMode
+          launch-media-driver: true
+          dir-delete-on-start: false
+      post-trade-response-channel:
+        channel-type: POST_TRADE_EVENT_PUBLISHER
+        channel-id: 2
+        aeron-config:
+          address: 0.0.0.0 # For PUBLISHER channel we need to set the hostname to 0.0.0.0, otherwise it will fail to start the archive during bounce
+          port: 24110
+          stream-id: 1
+          archive-enabled: true
+          enable-purge-segment: true
+          dir: /dev/shm/caas/post-trade-response-channel
+          archive-dir: /app/aeron/caas/post-trade-response-channel-archive
+          segment-retained: 700
+          publisher-inbox-open: true
+          subscriber-restore-enabled: false
+          threadingMode: DEDICATED
+          launch-media-driver: true
+          dir-delete-on-start: false
+      oms-child-response-channel:
+        channel-type: OMS_CHILD_RESPONSE_SUBSCRIBER
+        channel-id: 3
+        aeron-config:
+          address: "__{hostname}"
+          port: 12860
+          publisher-inbox-address: pt-broker-app-texo00-service
+          publisher-inbox-port: 13301
+          stream-id: 1
+          replay-subscriber: true
+          dir: /dev/shm/caas/caas-event-channel
+          threadingMode: DEDICATED
+          launch-media-driver: false
+          dir-delete-on-start: false
+
+    event-source-sequence-persistence:
+      interval: 15 # second
+      ##### TODO create event source for CAAS_PTW
+      event-sources: CAAS_PTW # refer to com.crypto.exchange.enums.EventSource
+      post-trade-event-source: CAAS_PTW
+  domainservice:
+    url: http://domainservice-server:14881
+    get-instruments-method: /api/v2/public/get-instruments
+  ems-static-dta-service:
+    url: http://domainservice-server:14881
+    get-instrument-methods: "{BINANCE: '/api/v2/public/get-instruments', COINBASE: '/api/v2/public/get-instruments', OKX: '/api/v2/public/get-instruments'}"
+  traderepository:
+    url: http://traderepository-server-oms-agency:15881 # TODO - Rename Schema/Rest name
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration
+  cloud:
+    stream:
+      function:
+        # disable auto binder for kafka
+        autodetect: false
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 1000
+        generate_statistics: false
+    show-sql: false

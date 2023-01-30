@@ -1,0 +1,156 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {
+            // Get the Artifactory url, username, password from system env
+            // If not defined on the system env, then try find them from gradle.properties
+            url((System.getenv("ARTIFACTORY_URL") != null ? System.getenv("ARTIFACTORY_URL") : "${ARTIFACTORY_URL}") + "/cryptoexchange-jcenter")
+            credentials {
+                username = System.getenv("ARTIFACTORY_USER")
+                password = System.getenv("ARTIFACTORY_APIKEY")
+            }
+        }
+    }
+}
+
+plugins {
+    id 'com.google.cloud.tools.jib' version '1.8.0' apply false
+    id 'com.jfrog.artifactory' version '4.13.0' apply false
+    id 'devops-gradle-plugins.jFrogPlugin' version '1.0.3-SNAPSHOT' apply false
+    id 'io.spring.dependency-management' version '1.0.8.RELEASE' apply false
+}
+
+ext {
+    artifactoryUsername = project.buildscript.repositories.maven.credentials.username
+    artifactoryPassword = project.buildscript.repositories.maven.credentials.password
+}
+
+allprojects {
+    if (!project.name.endsWith('-bom')) {
+        apply plugin: 'com.jfrog.artifactory'
+        apply plugin: 'maven-publish'
+        apply plugin: 'java'
+        apply plugin: 'java-library'
+        apply plugin: 'com.google.cloud.tools.jib'
+        apply plugin: 'devops-gradle-plugins.jFrogPlugin'
+        sourceCompatibility = '11'
+        targetCompatibility = '11'
+        [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+        javadoc {
+            title = '<h1>Crypto.com - ' + project.name + '</h1>'
+            options.bottom = '<i>Copyright &#169; 2019-2020 Crypto.com All Rights Reserved.</i>'
+        }
+        jfrog {
+            artifactoryUsername = rootProject.artifactoryUsername
+            artifactoryPassword = rootProject.artifactoryPassword
+            buildName = rootProject.jfrog.buildName
+        }
+        repositories {
+            mavenLocal()
+            maven {
+                url jfrog.artifactoryUrl + "/cryptoexchange-jcenter"
+                credentials {
+                    username = jfrog.artifactoryUsername
+                    password = jfrog.artifactoryPassword
+                }
+            }
+        }
+        configurations {
+            developmentOnly
+            runtimeClasspath {
+                extendsFrom developmentOnly
+            }
+            compileOnly {
+                extendsFrom annotationProcessor
+            }
+            all*.exclude module: 'spring-boot-starter-logging'
+            all*.exclude(group: 'log4j', module: 'log4j')
+            all*.exclude(group: 'org.slf4j', module: 'slf4j-log4j12')
+            dependencies {
+                api platform('com.crypto.exchange:commons-bom:' + project.commons_version)
+                annotationProcessor platform('com.crypto.exchange:commons-bom:' + project.commons_version)
+                testAnnotationProcessor platform('com.crypto.exchange:commons-bom:' + project.commons_version)
+                implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+                implementation 'com.lmax:disruptor'
+                implementation 'org.jasypt:jasypt'
+            }
+        }
+
+        jib {
+            // let the container create time be the current time, rather than 48+ years ago.
+            // See https://github.com/GoogleContainerTools/jib/blob/master/docs/faq.md#why-is-my-image-created-48-years-ago
+            container.creationTime = 'USE_CURRENT_TIMESTAMP'
+            container.extraClasspath = ['/app/config', '/app/resources/db/migration']
+            from.image = jfrog.artifactoryDockerUrl + '/cryptoexchange/jdk11:1.0.0'
+            from.auth.username = jfrog.artifactoryUsername
+            from.auth.password = jfrog.artifactoryPassword
+            to.image = jfrog.pushDockerImageName
+        }
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                }
+            }
+        }
+        artifactory {
+            contextUrl = jfrog.artifactoryUrl
+            publish {
+                repository {
+                    repoKey = jfrog.mavenDevRepo // The Artifactory repository key to publish to
+                    username = jfrog.artifactoryUsername
+                    password = jfrog.artifactoryPassword
+                }
+                defaults {
+                    // Reference to Gradle publications defined in the build script.
+                    // This is how we tell the Artifactory Plugin which artifacts should be
+                    // published to Artifactory.
+                    publications('mavenJava')
+                    publishPom = true
+                    publishArtifacts = true
+                }
+            }
+            clientConfig.info.setBuildNumber(jfrog.buildId + jfrog.mavenBuildIdSuffix)
+            clientConfig.info.setVcsRevision(System.getenv("CIRCLE_SHA1"))
+            clientConfig.info.setVcsUrl(System.getenv("CIRCLE_REPOSITORY_URL"))
+        }
+        afterEvaluate { Project project ->
+            helmPackage.enabled = false
+            pushHelmPackage.enabled = false
+            if (project.name.equals(rootProject.name)) {
+                artifactoryPublish.enabled = false
+                jibDockerBuild.enabled = false
+                pushDockerImage.enabled = false
+            } else {
+                configArtifactory.enabled = false
+                publishDockerBuild.enabled = false
+                publishHelmBuild.enabled = false
+                if (project.hasProperty('bootJar') && bootJar.enabled == true) {
+                    artifactoryPublish.enabled = false
+                    helmPackage.enabled = true
+                    pushHelmPackage.enabled = true
+                } else {
+                    jibDockerBuild.enabled = false
+                    pushDockerImage.enabled = false
+                }
+            }
+        }
+    } else {
+        apply plugin: 'com.jfrog.artifactory'
+        apply plugin: 'devops-gradle-plugins.jFrogPlugin'
+        jfrog {
+            artifactoryUsername = rootProject.artifactoryUsername
+            artifactoryPassword = rootProject.artifactoryPassword
+            buildName = rootProject.jfrog.buildName
+        }
+        repositories {
+            maven {
+                url jfrog.artifactoryUrl + "/cryptoexchange-jcenter"
+                credentials {
+                    username = jfrog.artifactoryUsername
+                    password = jfrog.artifactoryPassword
+                }
+            }
+        }
+    }
+}

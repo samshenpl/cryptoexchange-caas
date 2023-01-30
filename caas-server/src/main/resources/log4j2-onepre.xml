@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Don't forget to set system property
+-DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector
+to make all loggers asynchronous. -->
+
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="LogToConsole" target="SYSTEM_OUT">
+      <!--PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/-->
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} [%t] %m %ex%n</Pattern>
+      </PatternLayout>
+    </Console>
+    <!-- Async Loggers will auto-flush in batches, so switch off immediateFlush. -->
+    <RandomAccessFile name="LogToFile" fileName="logs/app.log" immediateFlush="false" append="false">
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} [%t] %m %ex%n</Pattern>
+      </PatternLayout>
+    </RandomAccessFile>
+  </Appenders>
+
+  <Loggers>
+    <Logger name="com.crypto.exchange" level="info" additivity="false">
+      <AppenderRef ref="LogToConsole"/>
+    </Logger>
+    <Logger name="com.crypto.exchange.domainservice" level="info" additivity="false">
+      <AppenderRef ref="LogToConsole"/>
+    </Logger>
+    <Logger name="org.springframework.boot" level="error" additivity="false">
+      <AppenderRef ref="LogToConsole"/>
+    </Logger>
+    <Root level="info" includeLocation="false">
+      <AppenderRef ref="LogToConsole"/>
+    </Root>
+  </Loggers>
+</Configuration>

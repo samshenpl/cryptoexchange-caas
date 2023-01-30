@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: agency-server
+  labels:
+    group: cryptoexchange
+    app: prometheus-operator-agency-server
+    # Need to keep these 3 labels, otherwise this ServiceMonitor doesn't work
+    chart: prometheus-operator-8.7.0
+    heritage: Helm
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      group: cryptoexchange
+      app: agency-server
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  endpoints:
+  - port: monitor-port
+    # default interval is 1 min
+    # interval: 10s
+    path: /monitor/prometheus

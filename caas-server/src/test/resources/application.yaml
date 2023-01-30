@@ -1,0 +1,106 @@
+instancetype: AGENCY
+
+server:
+  port: 24880
+
+health:
+  config:
+    enabled: false
+
+management:
+  server:
+    port: 24870
+  endpoints:
+    enabled-by-default: true
+    web:
+      exposure:
+        include: "self,info,health,prometheus,loggers,threaddump,features,logging-service"
+        exclude: "env,beans,heapdump"
+      base-path: /monitor
+  endpoint:
+    beans:
+      enabled: false
+    conditions:
+      enabled: false
+    configprops:
+      enabled: false
+    health:
+      show-details: always
+  metrics:
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+            percentiles-histogram: true
+    export:
+      simple:
+        enabled: true
+    tags:
+      application: ${project.name}
+
+cryptoexchange:
+  oms-common:
+    disable-recovery: true
+    channels:
+      parent-order-request-channel:
+        channel-type: PARENT_REQUEST_SUBSCRIBER
+        channel-id: 1
+        aeron-config:
+          address: "__{hostname}"
+          port: 24100
+          stream-id: 1
+          archive-enabled: true
+          dir: /tmp/app/aeron/agency/parent/parent-order-request-channel
+          archive-dir: /tmp/app/aeron/agency/parent/parent-order-request-channel-archive
+          threadingMode: SHARED # It requires take care multi-threading scenario while changing the threadingMode
+      post-trade-response-channel:
+        channel-type: POST_TRADE_EVENT_PUBLISHER
+        channel-id: 2
+        aeron-config:
+          address: 0.0.0.0 # For PUBLISHER channel we need to set the hostname to 0.0.0.0, otherwise it will fail to start the archive during bounce
+          port: 24110
+          stream-id: 1
+          archive-enabled: true
+          enable-purge-segment: true
+          dir: /tmp/app/aeron/agency/post-trade-response-channel
+          archive-dir: /tmp/app/aeron/agency/post-trade-response-channel-archive
+          segment-retained: 700
+          publisher-inbox-open: true
+          subscriber-restore-enabled: false
+          threadingMode: SHARED
+      oms-child-request-channel:
+        channel-type: OMS_CHILD_REQUEST_PUBLISHER
+        channel-id: 3
+        aeron-config:
+          address: 0.0.0.0
+          port: 15400
+          publisher-inbox-open: true
+          stream-id: 1
+          enable-purge-segment: true
+          dir: /tmp/app/aeron/agency/child/oms-child-request-channel
+          record-checksum: true
+          segment-retained: 700
+          offer-retry-count: 100
+          wait-for-Subscriber: true
+          threadingMode: SHARED
+  domainservice:
+    url: http://domainservice-server:14881
+    get-instruments-method: /api/v2/public/get-instruments
+  ems-static-dta-service:
+    url: http://domainservice-server:14881
+    get-instrument-methods: "{BINANCE: '/api/v2/public/get-instruments', COINBASE: '/api/v2/public/get-instruments', OKX: '/api/v2/public/get-instruments'}"
+  traderepository:
+    url: http://
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration
+  cloud:
+    stream:
+      function:
+        # disable auto binder for kafka
+        autodetect: false

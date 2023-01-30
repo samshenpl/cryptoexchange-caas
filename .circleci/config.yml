@@ -1,0 +1,131 @@
+version: 2.1
+
+jobs:
+  # Build the application and publish to JFrog Artifactory
+  publish-to-jfrog-repo:
+    docker:
+      - image: circleci/openjdk:11.0.8-jdk-buster-node-browsers
+    working_directory: ~/app
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - checkout
+      - run:
+          name: Check version
+          command: |
+            VERSION_FILE=gradle.properties
+            APP_PROJECT_VERSION=$(grep ^version $VERSION_FILE | cut -d'=' -f 2)
+            PROJECT_VERSION=`echo ${APP_PROJECT_VERSION/*-/}`
+            if [ "$PROJECT_VERSION" == "RELEASE" ] || [ "$PROJECT_VERSION" == "BETA" ]; then
+              RELEASE_BRANCH_NAME=release/v`echo ${APP_PROJECT_VERSION/-*/}`
+              set +e
+              git show-branch remotes/origin/$RELEASE_BRANCH_NAME
+              if [[ "$?" == "0" ]]; then
+                echo; echo "-------------------------------------------------"
+                echo "Project build is rejected"
+                echo "$RELEASE_BRANCH_NAME is frozen, please check your app version and try again."
+                echo "-------------------------------------------------"
+                exit 20
+              fi
+              set -e
+            fi
+            case $CIRCLE_BRANCH in
+              develop )
+                if [ "$PROJECT_VERSION" == "SNAPSHOT" ]; then
+                  echo "Passed version checking"
+                else
+                  echo "Branch ($CIRCLE_BRANCH) need to have version suffix SNAPSHOT in the $VERSION_FILE (now is: $APP_PROJECT_VERSION)"
+                  exit 9
+                fi
+                ;;
+              develop-* )
+                if [ "$PROJECT_VERSION" == "BETA" ]; then
+                  echo "Passed version checking"
+                else
+                  echo "Branch ($CIRCLE_BRANCH) need to have version suffix BETA in the $VERSION_FILE (now is: $APP_PROJECT_VERSION)"
+                  exit 10
+                fi
+                ;;
+              staging/* )
+                if [ "$PROJECT_VERSION" == "RELEASE" ]; then
+                  echo "Passed version checking"
+                else
+                  echo "Branch ($CIRCLE_BRANCH) need to have version suffix RELEASE in the $VERSION_FILE (now is: $APP_PROJECT_VERSION)"
+                  exit 10
+                fi
+                ;;
+              release/* )
+                echo "We don't build release/* branch"
+                exit 7
+                ;;
+              * )
+                if [[ "$PROJECT_VERSION" == "RELEASE" ]]; then
+                  echo "Only staging/* or release/* branch can have version suffix RELEASE in the $VERSION_FILE (now is: $APP_PROJECT_VERSION)"
+                  exit 8
+                else
+                  echo "Passed version checking"
+                fi
+                ;;
+            esac
+      - run:
+          name: Install jFrog CLI
+          command: |
+            curl -fL https://getcli.jfrog.io | sh
+            chmod +x jfrog
+            mkdir -p ~/.local/bin
+            mv jfrog ~/.local/bin
+      - run:
+          name: Show Tools version
+          command: |
+            javac -version
+            java -version
+            jfrog --version
+            docker --version
+            gradle --version
+      - run:
+          name: Docker login artifactory
+          command: |
+            docker login -u $ARTIFACTORY_USER -p $ARTIFACTORY_APIKEY $ARTIFACTORY_DOCKER_URL
+            docker login -u $ARTIFACTORY_USER -p $ARTIFACTORY_APIKEY $ARTIFACTORY_DOCKER_DEV_URL
+      - restore_cache:
+          keys:
+            # when lock file changes, use increasingly general patterns to restore cache
+            - gradle-{{ checksum "build.gradle" }}
+      - run:
+          name: Initialize gradle wrapper
+          command: |
+            gradle wrapper
+      - run:
+          name: Clean build and publish the project artifacts
+          command: |
+            ./gradlew :jfrogInfo > jfrogInfo.txt
+            ./gradlew clean build artifactoryPublish configArtifactory jibDockerBuild pushDockerImage publishDockerBuild helmPackage pushHelmPackage publishHelmBuild $grade_build_opts
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: gradle-{{ checksum "build.gradle" }}
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/app/build/test-results/junit/
+            find . -type f -regex ".*/build/test-results/.*xml" -exec cp {} ~/app/build/test-results/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/app/build/test-results
+      - persist_to_workspace:
+          root: ~/app
+          paths:
+            - jfrogInfo.txt
+
+workflows:
+  version: 2
+  build-flow:
+    jobs:
+      - publish-to-jfrog-repo:
+          context: cryptoexchange-non-prod
+          filters:
+            branches:
+              only:
+                - /^develop.*/
+                - /^feature\/.*/
+                - /^staging\/.*/

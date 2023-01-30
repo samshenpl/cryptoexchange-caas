@@ -1,0 +1,72 @@
+plugins {
+    id 'org.springframework.boot' version '2.2.4.RELEASE'
+}
+
+bootJar {
+    mainClassName = 'com.crypto.exchange.caas.server.CaasServerApp'
+}
+
+
+test {
+    useJUnitPlatform()
+    dependencies {
+
+        api project(':order-service')
+        api project(':quote-service')
+
+
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-webflux'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'com.google.guava:guava'
+        implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4' // ConfigurationDeserializer depends on 2.13
+        implementation ('com.crypto.exchange:oms-common-aeron:' + project.omscommons_version)  {
+            setChanging(true);
+        }
+        implementation ('com.crypto.exchange:commons-enums')  {
+            setChanging(true);
+            version {
+                strictly project.commons_version
+            }
+        }
+
+        implementation 'org.agrona:agrona'
+
+        implementation ('com.crypto.exchange:aeron-service-client:6.2.000300-BETA') {
+            exclude(group: "com.crypto.exchange", module: "commons-enums")
+        }
+
+        implementation 'org.projectlombok:lombok'
+        implementation 'com.amazonaws:aws-java-sdk-sts'
+
+        annotationProcessor 'org.projectlombok:lombok'
+
+        testImplementation 'org.junit.jupiter:junit-jupiter-params'
+        testImplementation 'org.mockito:mockito-core'
+        testImplementation 'org.mockito:mockito-junit-jupiter'
+        testImplementation 'org.assertj:assertj-core'
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        // junit 5
+        testImplementation 'org.junit.jupiter:junit-jupiter-api'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+        testImplementation 'org.agrona:agrona'
+        testAnnotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'com.crypto.exchange:commons-datamodels:' + project.commons_version
+        testImplementation ('com.crypto.exchange:commons-aeron:' + project.commons_version)  {
+            setChanging(true);
+        }
+        testImplementation 'com.crypto.exchange:matchingengine-channel:2.4.15111-BETA'
+    }
+}
+
+compileJava.dependsOn(processResources)
+processResources {
+    filesMatching('**/*.yaml') {
+        expand project.properties
+    }
+}
+
+repositories {
+    mavenCentral()
+}

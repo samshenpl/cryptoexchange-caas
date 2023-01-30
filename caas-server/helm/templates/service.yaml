@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agency-server
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /monitor
+    alb.ingress.kubernetes.io/healthcheck-port: monitor-port
+  labels:
+    group: cryptoexchange
+    app: agency-server
+spec:
+  ports:
+    - port: 24880
+      targetPort: 24880
+      protocol: TCP
+      name: app-rest-port # App REST port number.
+    - port: 24870
+      targetPort: 24870
+      protocol: TCP
+      name: monitor-port # Monitoring port
+    - port: 24400
+      targetPort: 24400
+      protocol: TCP
+      name: comm-spi-port # communication SPI port number.
+    - port: 24410
+      targetPort: 24410
+      protocol: TCP
+      name: discovery-spi-port # discovery SPI port number.
+    - port: 24100 # parent-order-request-channel ports. [24100,24109]
+      targetPort: 24100
+      protocol: UDP
+      name: parent-order-request-channel-0
+    - port: 24101
+      targetPort: 24101
+      protocol: UDP
+      name: parent-order-request-channel-1
+    - port: 24102
+      targetPort: 24102
+      protocol: UDP
+      name: parent-order-request-channel-2
+    - port: 24103
+      targetPort: 24103
+      protocol: UDP
+      name: parent-order-request-channel-3
+    - port: 24104
+      targetPort: 24104
+      protocol: UDP
+      name: parent-order-request-channel-4
+    - port: 24105
+      targetPort: 24105
+      protocol: UDP
+      name: parent-order-request-channel-5
+    - port: 24106
+      targetPort: 24106
+      protocol: UDP
+      name: parent-order-request-channel-6
+    - port: 24107
+      targetPort: 24107
+      protocol: UDP
+      name: parent-order-request-channel-7
+    - port: 24108
+      targetPort: 24108
+      protocol: UDP
+      name: parent-order-request-channel-8
+    - port: 24109
+      targetPort: 24109
+      protocol: UDP
+      name: parent-order-request-channel-9
+    - port: 24110 # post-trade-response-channel ports. [24110,24119]
+      targetPort: 24110
+      protocol: UDP
+      name: post-trade-response-channel-0
+    - port: 24111
+      targetPort: 24111
+      protocol: UDP
+      name: post-trade-response-channel-1
+    - port: 24112
+      targetPort: 24112
+      protocol: UDP
+      name: post-trade-response-channel-2
+    - port: 24113
+      targetPort: 24113
+      protocol: UDP
+      name: post-trade-response-channel-3
+    - port: 24114
+      targetPort: 24114
+      protocol: UDP
+      name: post-trade-response-channel-4
+    - port: 24115
+      targetPort: 24115
+      protocol: UDP
+      name: post-trade-response-channel-5
+    - port: 24116
+      targetPort: 24116
+      protocol: UDP
+      name: post-trade-response-channel-6
+    - port: 24117
+      targetPort: 24117
+      protocol: UDP
+      name: post-trade-response-channel-7
+    - port: 24118
+      targetPort: 24118
+      protocol: UDP
+      name: post-trade-response-channel-8
+    - port: 24119
+      targetPort: 24119
+      protocol: UDP
+      name: post-trade-response-channel-9
+    - port: 15400 # oms-child-request-channel ports. [15400,15409]
+      targetPort: 15400
+      protocol: UDP
+      name: oms-child-request-channel-0
+    - port: 15401
+      targetPort: 15401
+      protocol: UDP
+      name: oms-child-request-channel-1
+    - port: 15402
+      targetPort: 15402
+      protocol: UDP
+      name: oms-child-request-channel-2
+    - port: 15403
+      targetPort: 15403
+      protocol: UDP
+      name: oms-child-request-channel-3
+    - port: 15404
+      targetPort: 15404
+      protocol: UDP
+      name: oms-child-request-channel-4
+    - port: 15405
+      targetPort: 15405
+      protocol: UDP
+      name: oms-child-request-channel-5
+    - port: 15406
+      targetPort: 15406
+      protocol: UDP
+      name: oms-child-request-channel-6
+    - port: 15407
+      targetPort: 15407
+      protocol: UDP
+      name: oms-child-request-channel-7
+    - port: 15408
+      targetPort: 15408
+      protocol: UDP
+      name: oms-child-request-channel-8
+    - port: 15409
+      targetPort: 15409
+      protocol: UDP
+      name: oms-child-request-channel-9
+    - port: 24200 # sor-child-request-channel ports. [24200,24209]
+      targetPort: 24200
+      protocol: UDP
+      name: sor-child-request-channel-0
+    - port: 24201
+      targetPort: 24201
+      protocol: UDP
+      name: sor-child-request-channel-1
+    - port: 24202
+      targetPort: 24202
+      protocol: UDP
+      name: sor-child-request-channel-2
+    - port: 24203
+      targetPort: 24203
+      protocol: UDP
+      name: sor-child-request-channel-3
+    - port: 24204
+      targetPort: 24204
+      protocol: UDP
+      name: sor-child-request-channel-4
+    - port: 24205
+      targetPort: 24205
+      protocol: UDP
+      name: sor-child-request-channel-5
+    - port: 24206
+      targetPort: 24206
+      protocol: UDP
+      name: sor-child-request-channel-6
+    - port: 24207
+      targetPort: 24207
+      protocol: UDP
+      name: sor-child-request-channel-7
+    - port: 24208
+      targetPort: 24208
+      protocol: UDP
+      name: sor-child-request-channel-8
+    - port: 24209
+      targetPort: 24209
+      protocol: UDP
+      name: sor-child-request-channel-9
+  type: ClusterIP
+  selector:
+    group: cryptoexchange
+    app: agency-server

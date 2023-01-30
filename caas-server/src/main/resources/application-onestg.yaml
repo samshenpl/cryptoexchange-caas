@@ -1,0 +1,51 @@
+logging:
+  config: classpath:log4j2-onestg.xml
+spring:
+  datasource:
+    driver-class-name: com.amazonaws.secretsmanager.sql.AWSSecretsManagerPostgreSQLDriver
+    url: jdbc-secretsmanager:postgresql://pgsql-exchange.dstg.local:5432/onestg_texdb?socketTimeout=600&currentSchema=prime
+    username: dstg-onestg/caas-server/texdb
+    hikari:
+      maximumPoolSize: 10
+      leak-detection-threshold: 60000
+cryptoexchange:
+  oms-common:
+    aeron-texo-broker-client:
+      # Multi Client Configs
+      multi-client-configs:
+        1:
+          event-source: PTB_CAAS01
+          response-channel:
+            address: "__{hostname}"
+            port: 15351
+            publisher-inbox-address: pt-broker-app-acct01-service
+            publisher-inbox-port: 13301
+            stream-id: 1
+            replay-subscriber: true
+            dir: /dev/shm/caas/caas-event-channel
+            idle-strategy-config: sleepingmillis/1
+            enable-stat-check: true
+            stat-check-interval: 10000
+            replay-by-alt-sequence: true
+            add-publication-retry-failure-count: 1000
+            add-publication-retry-interval: 1000
+            launch-media-driver: false
+            dir-delete-on-start: false
+        2:
+          event-source: PTB_CAAS02
+          response-channel:
+            address: "__{hostname}"
+            port: 15352
+            publisher-inbox-address: pt-broker-app-acct02-service
+            publisher-inbox-port: 13301
+            stream-id: 1
+            replay-subscriber: true
+            dir: /dev/shm/caas/caas-event-channel
+            idle-strategy-config: sleepingmillis/1
+            enable-stat-check: true
+            stat-check-interval: 10000
+            replay-by-alt-sequence: true
+            add-publication-retry-failure-count: 1000
+            add-publication-retry-interval: 1000
+            launch-media-driver: false
+            dir-delete-on-start: false

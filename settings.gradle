@@ -1,0 +1,25 @@
+pluginManagement {
+    repositories {
+        maven {
+            url = ((System.getenv("ARTIFACTORY_URL") != null ? System.getenv("ARTIFACTORY_URL") : "${ARTIFACTORY_URL}") + "/cryptoexchange-jcenter")
+            credentials {
+                username = System.getenv("ARTIFACTORY_USER")
+                password = System.getenv("ARTIFACTORY_APIKEY")
+            }
+        }
+    }
+}
+rootProject.name = 'cryptoexchange-caas'
+include 'order-service'
+project(':order-service').buildFileName = 'order-service.gradle'
+
+include 'caas-server'
+project(':caas-server').buildFileName = 'caas-server.gradle'
+
+include 'quote-service'
+project(':quote-service').buildFileName = 'quote-service.gradle'
+
+include 'caas-core'
+project(':caas-core').buildFileName = 'caas-core.gradle'
+include 'caas-integration-test'
+

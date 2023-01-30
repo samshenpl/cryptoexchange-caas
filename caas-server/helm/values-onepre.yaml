@@ -1,0 +1,37 @@
+dockerImageName: DOCKER_IMAGE_NAME
+springProfilesActive: onepre,aeronServiceDBClientConfig
+
+resourceFilePatterns:
+  - resources/application.yaml
+  - resources/banner.txt
+  - resources/*-onepre.*
+  - resources/*.sh
+
+nodeSelectorKey: general-group
+nodeSelectorValue: true
+
+instance: agency-server
+
+javaToolOptions: -Xms4g -Xmx4g -Dreactor.netty.ioWorkerCount=30 -XX:+AlwaysPreTouch -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/heapdump -XX:+ExitOnOutOfMemoryError -XX:+UseAdaptiveSizePolicy -Xlog:gc*,safepoint:file=/app/gc-%t.log:tags,uptime,time,level:filecount=10,filesize=100m -Dlog4j2.formatMsgNoLookups=true
+memory:
+  limit: 10Gi
+  request: 6Gi
+cpu:
+  limit: 8000m
+  request: 500m
+
+readinessProbe:
+  initialDelaySeconds: 30
+
+terminationGracePeriodSeconds: 30
+
+replicas: 1
+imagePullPolicy: IfNotPresent
+
+awsStsRegionalEndpoints: regional
+zone: ap-northeast-1a
+
+serviceAccount:
+  create: true
+  name: agency-server
+  roleArn: arn:aws:iam::AWS_ACCOUNT_ID:role/EKS_CLUSTER_NAME-agency-server_onepre
